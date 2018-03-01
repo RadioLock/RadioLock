@@ -179,6 +179,7 @@ namespace RadioLock
 
                 case "/writecard":
                     //get build code, room code, room sub code, floor code from roomId
+
                     response.result = obj.WriteCard(request.startDate,"1","1","1","1" );
                     WriteLog("Kết quả: " + response.result);
                     if (this.Request.PathInfo == "/writecard")
