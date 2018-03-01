@@ -15,11 +15,11 @@ namespace RadioLock
     {
         private Hashtable roomList;
 
-        public string getReservationRoomId(string roomName, string cinTime)
+        public string getReservationRoomId(string roomId, string cinTime)
         {
             string reservaionRoomId = "0";
             string[] ReservationRoomLines = File.ReadAllLines("ReservationRoomId.txt");
-            string sKey = roomName.Trim() + "_" + cinTime.Trim();
+            string sKey = roomId.Trim() + "_" + cinTime.Trim();
             File.AppendAllText("logs.txt", "\r\n sKey:=" + sKey, Encoding.ASCII);
 
             foreach (string line in ReservationRoomLines)
@@ -40,7 +40,7 @@ namespace RadioLock
             return reservaionRoomId;
         }
 
-        public void logReservationRoomId(string roomName, string cinTime, string reservationRoomId)
+        public void logReservationRoomId(string roomId, string cinTime, string reservationRoomId)
         {
             // Tao file ghi nhan thong tin ReservationRoomId
             string logFilePath = "ReservationRoomId.txt";
@@ -49,7 +49,7 @@ namespace RadioLock
             FileInfo logFileInfo;
             logFileInfo = new FileInfo(logFilePath);
             string ReservationRoomValue = "";
-            string sKey = roomName.Trim() + "_" + cinTime.Trim();
+            string sKey = roomId.Trim() + "_" + cinTime.Trim();
             bool flag = true;
 
             if (!logFileInfo.Exists)
@@ -167,6 +167,7 @@ namespace RadioLock
             //RadioLockConnector.ConnectionString = String.Format("Data Source=" + datasource + ";Initial Catalog="  + dbname + ";Integrated Security=False;User Id=sa;Password=" + password + ";MultipleActiveResultSets=True", Settings.Default.LockFolder);
             WriteLog("ConnectionString:" + RadioLockConnector.ConnectionString);
             var response = new CardInfoResponse1 { result = 0 }; //0: OK
+            var readCardResponse = new CardInfoResponse2 {isSucess = false};
             //if (!frmMain.isValid) return response;
             RadioLockConnector obj = new RadioLockConnector();
 
@@ -174,9 +175,14 @@ namespace RadioLock
             {
                 case "/readcard": //read card info
                     var result = obj.ReadCard();
-                    response.response = result;
+                    readCardResponse.message = result.response; // chỗ này chứa card data chưa biết nó trả ra như nào chờ có log rồi xử lý tiếp
+                    if(result.result==0)
+                    {
+                        readCardResponse.isSucess = true;                       
+                    }
+                    //var reservationRoomId = getReservationRoomId(result., );
                     WriteLog("start Read card: Result-" + result);
-                    break;
+                    return readCardResponse;
 
                 case "/writecard":
                     //get build id, room id, room sub code, floor id from roomId
@@ -203,18 +209,15 @@ namespace RadioLock
                         }
                     }
                     response.result = obj.WriteCard(request.startDate, buildId, floorId, request.roomId, SubRoomId);
-                    WriteLog("Kết quả: " + response.result);
-                    if (this.Request.PathInfo == "/writecard")
+                    if (response.result==0) //success
                     {
-                        //logReservationRoomId();
+                        logReservationRoomId(request.roomId.ToString(),request.startDate.ToString("yyyyMMddHHmmss"),request.reservationRoomId.ToString());
                     }
 
                     break;
 
                 case "/deletecard":
-
                     response.result = obj.DeleteCard();
-                    WriteLog("Kết quả: " + response.result);
                     break;
 
                 default:

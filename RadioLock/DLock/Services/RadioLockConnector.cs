@@ -23,38 +23,31 @@ namespace RadioLock
         /// <returns> return：return value = 0 success，other value means fail，please refer to the error code of other return value。</returns>
         //public int ReadCard(ref string CardData, bool Buzzer);
 
-        public CardInfoResponse2 ReadCard()
+        public CardInfoResponse1 ReadCard()
         {
             byte cardtype = CardType.card_Room_number;
             string responsedata = "init";
+            var cardInfoResponse = new CardInfoResponse1();
             int result = devCommand.ReadCard(out cardtype, ref responsedata, true);
+            cardInfoResponse.result = result;
+            cardInfoResponse.response = responsedata;
+            cardInfoResponse.cardNumber = "0";
             if (result == 0)
             {
-                //Ok
-            }
-            else
-            {
-                //CardInfoService.CheckErr(result);
+                try
+                {
+                    string[] cardData = responsedata.Split(';');//including：card type、card number、valid time、card data
+                    cardInfoResponse.cardNumber = cardData[1];
+                    cardInfoResponse.validTime = cardData[2];
+                    cardInfoResponse.cardData = cardData[3];
+                }
+                catch (Exception ex)
+                {
+                    CardInfoService.WriteLog("Read Card -> split data exception:" + ex.Message);
+                }
             }
             CardInfoService.WriteLog("Read Card:" + result.ToString() + ", responsedata:" + responsedata);
-            return new CardInfoResponse2() { response = responsedata, result = result };
-        }
-
-        public CardInfoResponse2 ReadCardBeforeWrite()
-        {
-            byte cardtype = CardType.card_Room_number;
-            string responsedata = "init";
-            int result = devCommand.ReadCard(out cardtype, ref responsedata, true);
-            if (result == 0)
-            {
-              //Ok
-            }
-            else
-            {
-               //CardInfoService.CheckErr(result);
-            }
-            CardInfoService.WriteLog("ReadCardBeforeWrite:" + result.ToString() + ", responsedata:" + responsedata);
-            return new CardInfoResponse2() { response = responsedata, result = result };
+            return cardInfoResponse;
         }
 
         /// <summary>
@@ -72,24 +65,21 @@ namespace RadioLock
 
         public int WriteCard(DateTime validDate, int buildingId, int floorId, int roomId, int subId)
         {
-            CardInfoResponse2 card_info = ReadCardBeforeWrite();
+            CardInfoResponse1 card_info = ReadCard();
             //string data = "0F12500100";//0F125001: building = 15(0F)、floor = 18(12)、room = 80(50)、subroom = 1(01)，baseband value = 0，change to HEX string
             int result = 0;
             int cardnum = 0;
+            cardnum = int.Parse(card_info.cardNumber);
+            byte buildcode, floorcode, roomcode, subcode;
             string datetime = validDate.ToString("yyyyMMddHHmmss");
-            byte buildcode = 1, floorcode = 1, roomcode = 1, subcode = 0;//range from 0-255  0-255  0-255  0-15
+            buildcode = Convert.ToByte(buildingId);
+            floorcode = Convert.ToByte(floorId);
+            roomcode = Convert.ToByte(roomId);
+            subcode = Convert.ToByte(subId);//range from 0-255  0-255  0-255  0-15
             string data = buildcode.ToString("X2") + floorcode.ToString("X2") + roomcode.ToString("X2") + subcode.ToString("X2");
-            result = devCommand.WriteCard(CardType.card_Guest, cardnum, datetime, data, data.Length, true);
+            result = devCommand.WriteCard(CardType.card_Room_number, cardnum, datetime, data, data.Length, true);
             //CardInfoService.CheckErr(result);
             CardInfoService.WriteLog("WriteCard Response:" + result.ToString());
-            if (result == 0)
-            {
-                //OK
-            }
-            else
-            {
-
-            }
             return result;
         }
 
@@ -98,11 +88,7 @@ namespace RadioLock
             int result = 0;
             result = devCommand.ClearCard(2, true); // clear card data
             //CardInfoService.CheckErr(result);
-            CardInfoService.WriteLog("status:" + result.ToString());
-            if (result<=0)
-            {
-                //failed
-            }
+            CardInfoService.WriteLog("delete card status:" + result.ToString());
             return result;
         }
     }

@@ -1,0 +1,28 @@
+ConnectionString:Data Source=nghiale-pc;Initial Catalog=RadioLock;User ID=sa;Password=Ab123456789
+
+Read Card:-2000, responsedata:init
+
+start Read card: Result-RadioLock.CardInfoResponse1
+
+Start3/2/2018 12:05:45 AM
+
+ConnectionString:Data Source=nghiale-pc;Initial Catalog=RadioLock;User ID=sa;Password=Ab123456789
+
+status:-2000
+
+Kết quả: -2000
+
+Start3/2/2018 12:09:37 AM
+
+ConnectionString:Data Source=nghiale-pc;Initial Catalog=RadioLock;User ID=sa;Password=Ab123456789
+
+Read Card:-2000, responsedata:init
+
+Start3/2/2018 12:13:40 AM
+
+ConnectionString:Data Source=nghiale-pc;Initial Catalog=RadioLock;User ID=sa;Password=Ab123456789
+
+Read Card:-2000, responsedata:init
+
+WriteCard Response:-2000
+

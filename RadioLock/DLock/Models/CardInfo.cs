@@ -22,7 +22,11 @@ namespace RadioLock
 
     public class CardInfoResponse2
     {
-        public int result { get; set; }
-        public string response { get; set; }
+        public bool isSucess { get; set; }
+        public string message { get; set; }
+        public int reservationRoomId { get; set; }
+        public int roomId { get; set; }
+        public string validTime { get; set; }
+
     }
 }
