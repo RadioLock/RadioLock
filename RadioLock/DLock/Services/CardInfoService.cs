@@ -10,7 +10,7 @@ using System.Windows.Forms;
 
 namespace RadioLock
 {
-    public class CardInfoService : ServiceBase<CardInfo2>
+    public class CardInfoService : ServiceBase<CardInfoRequest1>
     {
         private Hashtable roomList;
 
@@ -157,63 +157,41 @@ namespace RadioLock
             return _LockNo;
         }
 
-        protected override object Run(CardInfo2 request)
+        protected override object Run(CardInfoRequest1 request)
         {
-            string password = ConfigurationSettings.AppSettings["dbPassword"];
-            string fileDb = ConfigurationSettings.AppSettings["fileDb"];
-            string datasource = ConfigurationSettings.AppSettings["dataSource"];
-            string dbname = ConfigurationSettings.AppSettings["dbName"];
-            RadioLockConnector.ConnectionString = String.Format("Data Source=" + datasource + ";Initial Catalog="  + dbname + ";Integrated Security=False;User Id=sa;Password=" + password + ";MultipleActiveResultSets=True", Settings.Default.LockFolder);
+            //string password = ConfigurationSettings.AppSettings["dbPassword"];
+            //string fileDb = ConfigurationSettings.AppSettings["fileDb"];
+            //string datasource = ConfigurationSettings.AppSettings["dataSource"];
+            //string dbname = ConfigurationSettings.AppSettings["dbName"];
+            //RadioLockConnector.ConnectionString = String.Format("Data Source=" + datasource + ";Initial Catalog="  + dbname + ";Integrated Security=False;User Id=sa;Password=" + password + ";MultipleActiveResultSets=True", Settings.Default.LockFolder);
             WriteLog("ConnectionString:" + RadioLockConnector.ConnectionString);
-            var response = new CardInfoResponse2 { Result = 1 }; //0: OK
-            if (!frmMain.isValid) return response;
+            var response = new CardInfoResponse1 { result = 0 }; //0: OK
+            //if (!frmMain.isValid) return response;
             RadioLockConnector obj = new RadioLockConnector();
 
             switch (this.Request.PathInfo)
             {
                 case "/readcard": //read card info
-                    var Info = obj.ReadCard();
-                    response.Result = Info.result;
-                    WriteLog("start Read card: Resuld-" + Info.result + ", CardNo:" + Info.cardNo + ",RoomName-" + Info.room + " Arrival date-" + Info.arrivalDate + ", Departure Date-" + Info.departureDate);
-                    if (Info.result == 0)
-                    {
-                        string roomName = Info.room.Insert(0, "00").Insert(4, "00").Insert(8, "00");
-                        response.TravellerId = getReservationRoomId(roomName, Info.arrivalDate.ToString("yyyyMMddHHmm"));
-                        response.ArrivalDate = Info.arrivalDate;
-                        response.DepartureDate = Info.departureDate;
-                        response.RoomName = Info.room;
-
-                        WriteLog("Thông tin response: " + "Result:" + response.Result + "TravellerId:" + response.TravellerId + "TravelllerName:" + response.TravellerName + "ArivalDate:" + response.ArrivalDate + "DepartureDate:" + response.DepartureDate +
-                            "RoomName:" + response.RoomName + "cardNumber:" + response.cardNumber);
-                    }
+                    var result = obj.ReadCard();
+                    response.response = result;
+                    WriteLog("start Read card: Result-" + result);                  
                     break;
 
                 case "/writecard":
-                    WriteLog("start writecard:RoomName-" + request.RoomName + ", Arr-" + request.ArrivalDate + ", Dep -" + request.DepartureDate + "TraellerId -" +
-                    request.TravellerId + "TravellerName:" + request.TravellerName);
-
-                    string roomAddress = getLockNo(request.RoomName);
-                    WriteLog("roomAddress:" + roomAddress);
-
-                    int travellerId = 0;
-                    Int32.TryParse(request.TravellerId, out travellerId);
-                    //string LockNo = "";
-                    //LockNo=roomList[request.RoomName].ToString();
-                    string HotelCode = Settings.Default.HotelCode;
-
-                    response.Result = obj.WriteCard(roomAddress, request.ArrivalDate.ToString("yyyy-MM-dd HH:mm:ss"), request.DepartureDate.ToString("yyyy-MM-dd HH:mm:ss"), 0);
-                    WriteLog("Kết quả: " + response.Result);
+                    //get build code, room code, room sub code, floor code from roomId
+                    response.result = obj.WriteCard(request.startDate,"1","1","1","1" );
+                    WriteLog("Kết quả: " + response.result);
                     if (this.Request.PathInfo == "/writecard")
                     {
-                        logReservationRoomId(roomAddress, request.ArrivalDate.ToString("yyyyMMddHHmm"), request.TravellerId);
+                        //logReservationRoomId();
                     }
 
                     break;
 
                 case "/deletecard":
 
-                    response.Result = obj.DeleteCard();
-                    WriteLog("Kết quả: " + response.Result);
+                    response.result = obj.DeleteCard();
+                    WriteLog("Kết quả: " + response.result);
                     break;
 
                 default:

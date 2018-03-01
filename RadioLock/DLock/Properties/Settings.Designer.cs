@@ -49,7 +49,7 @@ namespace RadioLock.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("C:\\Program Files (x86)\\GLock\\")]
+        [global::System.Configuration.DefaultSettingValueAttribute("D:\\BiolockData\\")]
         public string LockFolder {
             get {
                 return ((string)(this["LockFolder"]));

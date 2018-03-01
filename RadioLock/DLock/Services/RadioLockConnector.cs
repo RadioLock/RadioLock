@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -6,7 +7,7 @@ namespace RadioLock
 {
     internal class RadioLockConnector
     {
-        public static string ConnectionString = "Data Source=.\\SQLHotelLock;Initial Catalog=RadioLock;Integrated Security=False;User Id=sa;Password=123;MultipleActiveResultSets=True";
+        public static string ConnectionString = ConfigurationManager.ConnectionStrings["DB"].ToString();
 
         internal static Dev_C_Sharp.Dev_C_Sharp devCommand = Dev_C_Sharp.Dev_C_Sharp.Instance;
         internal static int WriteGuestCard()
@@ -14,82 +15,81 @@ namespace RadioLock
             return devCommand.WriteCard(0, 0, "", "", 0, false);
         }
 
-        //public int connecToLock(Int16 LockType)
-        //{
-        //    int result = 0;
-        //    result = TP_Configuration(LockType);
-        //    return result;
-        //}
+        /// <summary>
+        /// read card  Opening USB or COM depends on you.
+        /// </summary>
+        /// <param name="retdata">card written data return，string type，divided by”;”，including：card type、card number、valid time、card data。</param>        
+        /// <param name="Buzzer">true：device buzzer。false：no buzzer</param>
+        /// <returns> return：return value = 0 success，other value means fail，please refer to the error code of other return value。</returns>
+        //public int ReadCard(ref string CardData, bool Buzzer);
 
-        public CardInfo1 ReadCard()
+        public string ReadCard()
         {
-            byte cardtype = 255;
-            string carddata = "";
+            byte cardtype = CardType.card_Room_number;
+            string carddata = "init";
             int result = devCommand.ReadCard(out cardtype, ref carddata, true);
-
-            //StringBuilder lockinfo = new StringBuilder(2048);
-            //StringBuilder recstr = new StringBuilder(7680);
-            //int result = devCommand.ReadCardS70(lockinfo, recstr, true);
-
-            if (result == 1)
-            { 
-                result = 0;
-            }
-            //else
-            //{
-            //    CardInfoService.CheckErr(result);
-            //}
-            var retval = new CardInfo1 { result = result };
             if (result == 0)
-            {
-                //var date = new DateTime();
-                //var date2 = new DateTime();
-                //DateTime.TryParse(intime.ToString(), out date);
-                //DateTime.TryParse(outtime.ToString(), out date2);
-                //retval.arrivalDate = date;
-                //retval.departureDate = date2;
-                //retval.cardNo = card_snr.ToString();
-                //retval.room = roomno.ToString();
-                //retval.flags = iflags;
+            { 
+                //Ok
             }
-
-            CardInfoService.WriteLog("ReadCard: " + "Result:" + retval.result + "Room-" + retval.room + "" + "CardNo-" + retval.cardNo + "ArrivalDate-" + retval.arrivalDate +
-                "DepartureDate-" + retval.departureDate);
-            return retval;
+            else
+            {
+                //CardInfoService.CheckErr(result);
+            }
+            CardInfoService.WriteLog("Read Card:" + result.ToString() + ", CardData:" + carddata);
+            return carddata;
         }
 
-        //public StringBuilder ReadCardBeforeWrite()
-        //{
-        //    StringBuilder card_snr = new StringBuilder(100);
-        //    StringBuilder roomno = new StringBuilder(100);
-        //    StringBuilder intime = new StringBuilder(100);
-        //    StringBuilder outtime = new StringBuilder(100);
-        //    int result = (card_snr, roomno, intime, outtime);
-        //    StringBuilder cardSnr = new StringBuilder(100);
-        //    if (result == 1)
-        //    {
-        //        cardSnr = card_snr;
-        //    }
-
-        //    //CardInfoService.CheckErr(result);
-        //    CardInfoService.WriteLog("ReadCardBeforeWrite:" + result.ToString() + ", cardSnr:" + cardSnr);
-
-        //    return cardSnr;
-        //}
-
-        public int WriteCard(string room_no, string checkin_time, string checkout_time, Int16 iflags)
+        public int ReadCardBeforeWrite()
         {
-            //StringBuilder card_snr = ReadCardBeforeWrite();
+            byte cardtype = CardType.card_Room_number;
+            string carddata = "init";
+            int result = devCommand.ReadCard(out cardtype, ref carddata, true);
+            if (result == 0)
+            {
+              //Ok
+            }
+            else
+            {
+               //CardInfoService.CheckErr(result);
+            }
+            CardInfoService.WriteLog("ReadCardBeforeWrite:" + result.ToString() + ", CardData:" + carddata);
+            return result;
+        }
+
+        /// <summary>
+        /// write card
+        /// </summary>
+        /// <param name="cardtype">card type（0 - 255）</param>
+        /// <param name="cardnum">card number（0 - 16777215）</param>
+        /// <param name="datetime">valid date（format: year, month, date, hour, minute，Ex：201106012359）</param>
+        /// <param name="carddata">card data（please refre to the card writing format）</param>
+        /// <param name="datalen">card data length</param>
+        /// <param name="Buzzer">true：device buzzering。false：no buzzering</param>
+        /// <returns>return：return value = 0 success，other value means fail，please refer to the error code of other return value。</returns>
+        //public int WriteCard(int cardtype, int cardnum, string datetime, string carddata, int datalen, bool Buzzer);
+
+
+        public int WriteCard(DateTime validDate, string buildingCode, string floorCode, string roomCode, string subCode)
+        {
+            int card_info = ReadCardBeforeWrite();
             //string data = "0F12500100";//0F125001: building = 15(0F)、floor = 18(12)、room = 80(50)、subroom = 1(01)，baseband value = 0，change to HEX string
             int result = 0;
             int cardnum = 0;
-            string datetime = "";
+            string datetime = validDate.ToString("yyyyMMddHHmmss");
             byte buildcode = 1, floorcode = 1, roomcode = 1, subcode = 0;//range from 0-255  0-255  0-255  0-15
             string data = buildcode.ToString("X2") + floorcode.ToString("X2") + roomcode.ToString("X2") + subcode.ToString("X2");
             result = devCommand.WriteCard(CardType.card_Guest, cardnum, datetime, data, data.Length, true);
             //CardInfoService.CheckErr(result);
-            CardInfoService.WriteLog("WriteCard:" + result.ToString() + ", room_no:" + room_no + ",checkin_time:" + checkin_time + ",checkout_time:" + checkout_time + "iflags:" + iflags);
-            if (result == 1) result = 0;
+            CardInfoService.WriteLog("WriteCard Response:" + result.ToString());
+            if (result == 0)
+            {
+                //OK
+            }
+            else
+            {
+
+            }
             return result;
         }
 
@@ -99,7 +99,10 @@ namespace RadioLock
             result = devCommand.ClearCard(2, true); // clear card data
             //CardInfoService.CheckErr(result);
             CardInfoService.WriteLog("status:" + result.ToString());
-            if (result == 1) result = 0;
+            if (result<=0)
+            {
+                //failed
+            }
             return result;
         }
     }

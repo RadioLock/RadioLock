@@ -21,15 +21,20 @@ namespace RadioLock
         public frmMain()
         {
             InitializeComponent();
+            this.lblStatus.Text = "Đã kết nối, Bạn có thể tiến hành tạo khóa khách hàng!";
+            lblStatus.ForeColor = Color.Blue;
+            button2.Enabled = false;
             this.CenterToScreen();
         }
 
         private void frmMain_Load(object sender, EventArgs e)
         {
+            CardInfoService.WriteLog("Start" + DateTime.Now.ToString());
             var appHost = new AppHost();
             appHost.Init();
             appHost.Start(listeningOn);
             SelectInstallationFolder();
+            
             //string[] ports = SerialPort.GetPortNames();
 
             //foreach (string port in ports)
@@ -48,13 +53,13 @@ namespace RadioLock
             if (!txtLocation.Text.EndsWith("\\"))
                 txtLocation.Text += "\\";
             string queryString = "";
-            string password = ConfigurationSettings.AppSettings["dbPassword"];
-            string fileDb = ConfigurationSettings.AppSettings["fileDb"];
-            string datasource = ConfigurationSettings.AppSettings["dataSource"];
-            string dbname = ConfigurationSettings.AppSettings["dbName"];
-
+            //string password = ConfigurationSettings.AppSettings["dbPassword"];
+            //string fileDb = ConfigurationSettings.AppSettings["fileDb"];
+            //string datasource = ConfigurationSettings.AppSettings["dataSource"];
+            //string dbname = ConfigurationSettings.AppSettings["dbName"];
+            RadioLockConnector.ConnectionString = ConfigurationManager.ConnectionStrings["DB"].ToString();
             queryString = "SELECT TOP 1 Build_Code FROM D_Build";
-            RadioLockConnector.ConnectionString = String.Format("Data Source=" + datasource + ";Initial Catalog=" + dbname + ";Integrated Security=False;User Id=sa;Password=" + password + ";MultipleActiveResultSets=True", txtLocation.Text);
+            //RadioLockConnector.ConnectionString = String.Format("Data Source=" + datasource + ";Initial Catalog=" + dbname + ";Integrated Security=False;User Id=sa;Password=" + password + ";MultipleActiveResultSets=True", txtLocation.Text);
             using (SqlConnection connection = new SqlConnection(RadioLockConnector.ConnectionString))
             using (SqlCommand command = new SqlCommand(queryString, connection))
             {
@@ -81,36 +86,32 @@ namespace RadioLock
                 {
                     //Not correct folder
                     CardInfoService.WriteLog("Error:" + ex.Message);
-                    MessageBox.Show("Thư mục khóa chưa đúng. Mời bạn chọn");
-                    button2.ForeColor = Color.Red;
+                    //MessageBox.Show("Thư mục khóa chưa đúng. Mời bạn chọn");
+                    //button2.ForeColor = Color.Red;
                     return;
                 }
             }
 
-            if (Settings.Default.SystemCode.Length > 0)
-            {
-                RadioLockConnector obj = new RadioLockConnector();
-                Int16 locktype = 0;
-
-                locktype = Convert.ToInt16(Settings.Default.SystemCode);
-
-                int st = 0;
-                //st = obj.connecToLock(locktype);
-                CardInfoService.WriteLog("Read Database:LockType:" + locktype.ToString() + ", Result:" + st.ToString());
-                //st = 1;
-                if (st == 1)
-                {
-                    isValid = true;
-                    this.lblStatus.Text = "Đã kết nối, Bạn có thể tiến hành tạo khóa khách hàng!";
-                    lblStatus.ForeColor = Color.Blue;
-                    button2.Enabled = false;
-                }
-                else
-                {
-                    isValid = false;
-                    CardInfoService.CheckErr(st);
-                }
-            }
+            //if (Settings.Default.SystemCode.Length > 0)
+            //{
+            //    RadioLockConnector obj = new RadioLockConnector();
+            //    int st = 0;
+            //    st = obj.ReadCardBeforeWrite();
+            //    CardInfoService.WriteLog("Read Database:LockType:" + locktype.ToString() + ", Result:" + st.ToString());
+            //    //st = 1;
+            //    if (st == 1)
+            //    {
+            //        isValid = true;
+            //        this.lblStatus.Text = "Đã kết nối, Bạn có thể tiến hành tạo khóa khách hàng!";
+            //        lblStatus.ForeColor = Color.Blue;
+            //        button2.Enabled = false;
+            //    }
+            //    else
+            //    {
+            //        isValid = false;
+            //        CardInfoService.CheckErr(st);
+            //    }
+            //}
         }
 
         //private void btnCreate_Click(object sender, EventArgs e)
@@ -200,9 +201,9 @@ namespace RadioLock
             });
 
             Routes
-            .Add<CardInfo2>("/readcard")
-            .Add<CardInfo2>("/deletecard")
-            .Add<CardInfo2>("/writecard");
+            .Add<CardInfoRequest1>("/readcard")
+            .Add<CardInfoRequest1>("/deletecard")
+            .Add<CardInfoRequest1>("/writecard");
         }
     }
 
