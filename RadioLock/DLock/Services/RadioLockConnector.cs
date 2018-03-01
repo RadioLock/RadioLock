@@ -23,28 +23,28 @@ namespace RadioLock
         /// <returns> return：return value = 0 success，other value means fail，please refer to the error code of other return value。</returns>
         //public int ReadCard(ref string CardData, bool Buzzer);
 
-        public string ReadCard()
+        public CardInfoResponse2 ReadCard()
         {
             byte cardtype = CardType.card_Room_number;
-            string carddata = "init";
-            int result = devCommand.ReadCard(out cardtype, ref carddata, true);
+            string responsedata = "init";
+            int result = devCommand.ReadCard(out cardtype, ref responsedata, true);
             if (result == 0)
-            { 
+            {
                 //Ok
             }
             else
             {
                 //CardInfoService.CheckErr(result);
             }
-            CardInfoService.WriteLog("Read Card:" + result.ToString() + ", CardData:" + carddata);
-            return carddata;
+            CardInfoService.WriteLog("Read Card:" + result.ToString() + ", responsedata:" + responsedata);
+            return new CardInfoResponse2() { response = responsedata, result = result };
         }
 
-        public int ReadCardBeforeWrite()
+        public CardInfoResponse2 ReadCardBeforeWrite()
         {
             byte cardtype = CardType.card_Room_number;
-            string carddata = "init";
-            int result = devCommand.ReadCard(out cardtype, ref carddata, true);
+            string responsedata = "init";
+            int result = devCommand.ReadCard(out cardtype, ref responsedata, true);
             if (result == 0)
             {
               //Ok
@@ -53,8 +53,8 @@ namespace RadioLock
             {
                //CardInfoService.CheckErr(result);
             }
-            CardInfoService.WriteLog("ReadCardBeforeWrite:" + result.ToString() + ", CardData:" + carddata);
-            return result;
+            CardInfoService.WriteLog("ReadCardBeforeWrite:" + result.ToString() + ", responsedata:" + responsedata);
+            return new CardInfoResponse2() { response = responsedata, result = result };
         }
 
         /// <summary>
@@ -70,9 +70,9 @@ namespace RadioLock
         //public int WriteCard(int cardtype, int cardnum, string datetime, string carddata, int datalen, bool Buzzer);
 
 
-        public int WriteCard(DateTime validDate, string buildingCode, string floorCode, string roomCode, string subCode)
+        public int WriteCard(DateTime validDate, int buildingId, int floorId, int roomId, int subId)
         {
-            int card_info = ReadCardBeforeWrite();
+            CardInfoResponse2 card_info = ReadCardBeforeWrite();
             //string data = "0F12500100";//0F125001: building = 15(0F)、floor = 18(12)、room = 80(50)、subroom = 1(01)，baseband value = 0，change to HEX string
             int result = 0;
             int cardnum = 0;

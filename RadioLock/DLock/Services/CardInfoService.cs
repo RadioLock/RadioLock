@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Configuration;
 using System.Data.OleDb;
+using System.Data.SqlClient;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -174,13 +175,34 @@ namespace RadioLock
                 case "/readcard": //read card info
                     var result = obj.ReadCard();
                     response.response = result;
-                    WriteLog("start Read card: Result-" + result);                  
+                    WriteLog("start Read card: Result-" + result);
                     break;
 
                 case "/writecard":
-                    //get build code, room code, room sub code, floor code from roomId
-
-                    response.result = obj.WriteCard(request.startDate,"1","1","1","1" );
+                    //get build id, room id, room sub code, floor id from roomId
+                    int floorId = 0, buildId = 0, SubRoomId = 0;
+                    using (SqlConnection connection = new SqlConnection(RadioLockConnector.ConnectionString))
+                    {
+                        var queryString = string.Format("select R_FloorID,Build_ID,R_SubCode from v_HotelRooms where R_ID={0}", request.roomId);
+                        SqlCommand command = new SqlCommand(queryString, connection);
+                        try
+                        {
+                            connection.Open();
+                            SqlDataReader reader = command.ExecuteReader();
+                            while (reader.Read())
+                            {
+                                floorId = int.Parse(reader[0].ToString());
+                                buildId = int.Parse(reader[1].ToString());
+                                SubRoomId = int.Parse(reader[2].ToString());
+                            }
+                            reader.Close();
+                        }
+                        catch (Exception ex)
+                        {
+                            CardInfoService.WriteLog("Error:" + ex.Message);
+                        }
+                    }
+                    response.result = obj.WriteCard(request.startDate, buildId, floorId, request.roomId, SubRoomId);
                     WriteLog("Kết quả: " + response.result);
                     if (this.Request.PathInfo == "/writecard")
                     {

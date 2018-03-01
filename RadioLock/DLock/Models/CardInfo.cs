@@ -19,4 +19,10 @@ namespace RadioLock
         public int flags { get; set; }
         public string response { get; set; }
     }
+
+    public class CardInfoResponse2
+    {
+        public int result { get; set; }
+        public string response { get; set; }
+    }
 }
