@@ -15,41 +15,70 @@ namespace RadioLock
         private bool newlySelected = false;
         public static bool reloadRoomList = false;
         public static int COMPort;
-
+        internal static Dev_C_Sharp.Dev_C_Sharp devCommand = Dev_C_Sharp.Dev_C_Sharp.Instance;
         private string listeningOn = "http://*:2000/";
 
         public frmMain()
         {
             InitializeComponent();
-            this.lblStatus.Text = "Đã kết nối, Bạn có thể tiến hành tạo khóa khách hàng!";
-            lblStatus.ForeColor = Color.Blue;
-            button2.Enabled = false;
             this.CenterToScreen();
         }
 
         private void frmMain_Load(object sender, EventArgs e)
         {
-            CardInfoService.WriteLog("Start" + DateTime.Now.ToString());
+            //CardInfoService.WriteLog(DateTime.Now.ToString() + " : ");
+            CardInfoService.WriteLog(DateTime.Now.ToString() + " : Form Load");
             var appHost = new AppHost();
             appHost.Init();
             appHost.Start(listeningOn);
-            SelectInstallationFolder();
+            ConnectDB();
+            OpenPort();
         }
 
-        private void SelectInstallationFolder()
+        private void ConnectDB()
         {
-           
-        }
-        private void button2_Click(object sender, EventArgs e)
-        {
-            var folder = folderBrowserDialog1.ShowDialog();
-            if (folder == DialogResult.OK)
+            using (SqlConnection connection = new SqlConnection(RadioLockConnector.ConnectionString))
             {
-                newlySelected = true;
-                Settings.Default.SystemCode = "";
-                Settings.Default.LockFolder = folderBrowserDialog1.SelectedPath;
-                Settings.Default.Save();
-                SelectInstallationFolder();
+                var queryString = string.Format("SELECT TOP 1 Build_Code FROM D_Build");
+                SqlCommand command = new SqlCommand(queryString, connection);
+                try
+                {
+                    connection.Open();
+                    SqlDataReader reader = command.ExecuteReader();
+
+                    while (reader.Read())
+                    {
+                        // just check if we can connect to DB
+                    }
+                    reader.Close();
+                    CardInfoService.WriteLog(DateTime.Now.ToString() + " : ConnectionString : " + RadioLockConnector.ConnectionString);
+                }
+                catch (Exception ex)
+                {
+                    //Not correct folder
+                    CardInfoService.WriteLog("Error:" + ex.Message);
+                    lblStatus.Text = "Không thể kết nối tới Database";
+                    lblStatus.ForeColor = Color.Red;
+                    return;
+                }
+            }
+        }
+
+        public void OpenPort()
+        {
+            int m_portnum = int.Parse(ConfigurationManager.AppSettings["port"]);
+            int baud = int.Parse(ConfigurationManager.AppSettings["baud"]);
+            var st = devCommand.OpenPort(m_portnum, baud, true);
+            if (st < 4 && st!= -800)
+            {
+                //devCommand.ClosePort(m_portnum);
+                CardInfoService.WriteLog(DateTime.Now.ToString() + " : Can't open port");
+                lblStatus.Text = "Không thể mở port";
+                lblStatus.ForeColor = Color.Red;
+            }
+            else
+            {
+                CardInfoService.WriteLog(DateTime.Now.ToString() + " : Port opened");
             }
         }
     }

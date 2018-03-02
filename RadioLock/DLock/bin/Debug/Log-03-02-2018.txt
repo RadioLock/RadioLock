@@ -26,3 +26,9 @@ Read Card:-2000, responsedata:init
 
 WriteCard Response:-2000
 
+Start3/2/2018 11:40:33 PM
+
+Start3/2/2018 11:40:55 PM
+
+Start3/2/2018 11:42:46 PM
+

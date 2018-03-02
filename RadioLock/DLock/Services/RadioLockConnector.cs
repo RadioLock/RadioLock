@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data.SqlClient;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -15,6 +16,97 @@ namespace RadioLock
             return devCommand.WriteCard(0, 0, "", "", 0, false);
         }
 
+        public RoomInfo GetAllCodebyRoomName(string roomName)
+        {
+            RoomInfo info = new RoomInfo();
+            using (SqlConnection connection = new SqlConnection(RadioLockConnector.ConnectionString))
+            {
+                var queryString = string.Format(@"select D_Build.Build_Code,D_Floor.Floor_Code,D_Rooms.R_Code,R_SubCode,R_SubCodeDai
+                                                from D_Rooms 
+                                                inner join D_Floor on D_Rooms.R_FloorID =D_Floor.Floor_ID
+                                                inner join D_Build on D_Floor.Build_ID = D_Build.Build_ID
+												where D_Rooms.R_Name='{0}'", roomName);
+                SqlCommand command = new SqlCommand(queryString, connection);
+                try
+                {
+                    connection.Open();
+                    SqlDataReader reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        info.b_code = reader[0].ToString();
+                        info.f_code = reader[1].ToString();
+                        info.r_code = reader[2].ToString();
+                        info.r_subcode = reader[3].ToString();
+                        info.r_subcodedai = reader[4].ToString();
+                    }
+                    reader.Close();
+                    CardInfoService.WriteLog(DateTime.Now.ToString() + " : ConnectionString : " + RadioLockConnector.ConnectionString);
+                }
+                catch (Exception ex)
+                {
+                    CardInfoService.WriteLog(DateTime.Now.ToString() + " GetAllCodebyRoomName Error:" + ex.Message);
+                }
+            }
+            return info;
+        }
+        public string GetRoomName(string b_code, string f_code, string r_code, string r_subcode, string r_subcodedai)
+        {
+            string roomName = "";
+            using (SqlConnection connection = new SqlConnection(RadioLockConnector.ConnectionString))
+            {
+                var queryString = string.Format(@"select D_Rooms.R_Name 
+                                                from D_Rooms 
+                                                inner join D_Floor on D_Rooms.R_FloorID =D_Floor.Floor_ID
+                                                inner join D_Build on D_Floor.Build_ID = D_Build.Build_ID
+                                                where D_Rooms.R_Code={0}
+                                                and D_Floor.Floor_Code={1}
+                                                and D_Build.Build_Code={2} 
+                                                and D_Rooms.R_SubCode={3}
+                                                and D_Rooms.R_SubCodeDai={4}",r_code,f_code,b_code,r_subcode,r_subcodedai);
+                SqlCommand command = new SqlCommand(queryString, connection);
+                try
+                {
+                    connection.Open();
+                    SqlDataReader reader = command.ExecuteReader();
+
+                    while (reader.Read())
+                    {
+                        roomName = reader[0].ToString();
+                    }
+                    reader.Close();
+                    CardInfoService.WriteLog(DateTime.Now.ToString() + " : ConnectionString : " + RadioLockConnector.ConnectionString);
+                }
+                catch (Exception ex)
+                {
+                    CardInfoService.WriteLog(DateTime.Now.ToString() + " GetRoomName Error:" + ex.Message);
+                }
+            }
+            return roomName;
+        }
+
+        public string GetCardNumberBeforeWrite()
+        {
+            int st = 0;
+            string carddata = "", cardNumber="0";
+            byte cardType = 255;
+            st = devCommand.ReadCard(out cardType, ref carddata, true);
+            if (st < 0)
+            {
+                CardInfoService.WriteLog(DateTime.Now.ToString() + " : GetCardNumberBeforeWrite : " + st.ToString());
+            }
+            else
+            {
+                if(!string.IsNullOrEmpty(carddata))
+                {
+                     string[] data = carddata.Split(';');
+                     cardNumber = data[0];
+                }
+                CardInfoService.WriteLog(DateTime.Now.ToString() + " : GetCardNumberBeforeWrite : " + carddata + " CardType : " + cardType.ToString());                
+            }
+            return cardNumber;
+        }
+
+
         /// <summary>
         /// read card  Opening USB or COM depends on you.
         /// </summary>
@@ -25,28 +117,52 @@ namespace RadioLock
 
         public CardInfoResponse1 ReadCard()
         {
-            byte cardtype = CardType.card_Room_number;
-            string responsedata = "init";
             var cardInfoResponse = new CardInfoResponse1();
-            int result = devCommand.ReadCard(out cardtype, ref responsedata, true);
-            cardInfoResponse.result = result;
-            cardInfoResponse.response = responsedata;
-            cardInfoResponse.cardNumber = "0";
-            if (result == 0)
+            int st = 0;
+            string carddata = "";
+            byte cardType = 255;
+            st = devCommand.ReadCard(out cardType, ref carddata, true);
+            if (st < 0)
             {
-                try
+                cardInfoResponse.isSuccess = false;
+                CardInfoService.WriteLog(DateTime.Now.ToString() + " : Read Card Error Code : " + st.ToString());
+                cardInfoResponse.message = st.ToString();
+            }
+            else
+            {
+                cardInfoResponse.isSuccess = true;
+                CardInfoService.WriteLog(DateTime.Now.ToString() + " : Read Card Success -- DataOnCard : " + carddata + " CardType : " + cardType.ToString());
+                if (!string.IsNullOrEmpty(carddata))
                 {
-                    string[] cardData = responsedata.Split(';');//including：card type、card number、valid time、card data
-                    cardInfoResponse.cardNumber = cardData[1];
-                    cardInfoResponse.validTime = cardData[2];
-                    cardInfoResponse.cardData = cardData[3];
-                }
-                catch (Exception ex)
-                {
-                    CardInfoService.WriteLog("Read Card -> split data exception:" + ex.Message);
+                    //format 596;2018-03-02 12:30;1,3,2,0,61 -> CardNumber;Valid Date = EndDate; build code, floor code, room code, room subcode, room subcode dai
+                    try
+                    {
+                        string[] data = carddata.Split(';');
+                        cardInfoResponse.cardNumber = data[0];
+                        if(data.Length>1)
+                        {
+                            cardInfoResponse.validTime = data[1];
+                            string roomData = data[2];
+                            string[] roomSplitData = roomData.Split(',');
+                            RoomInfo roomInfo = new RoomInfo();
+                            roomInfo.b_code = roomSplitData[0];
+                            roomInfo.f_code = roomSplitData[1];
+                            roomInfo.r_code = roomSplitData[2];
+                            roomInfo.r_subcode = roomSplitData[3];
+                            roomInfo.r_subcodedai = roomSplitData[4];
+
+                            string roomName = GetRoomName(roomInfo.b_code, roomInfo.f_code, roomInfo.r_code, roomInfo.r_subcode, roomInfo.r_subcodedai);
+                            cardInfoResponse.roomName = roomName;
+                            var validDate = DateTime.ParseExact(data[1], "yyyy-MM-dd HH:mm",System.Globalization.CultureInfo.InvariantCulture);
+                            cardInfoResponse.reservationRoomId = CardInfoService.getReservationRoomId(roomName, validDate.ToString("yyyyMMddHHmm"));
+                        }
+                    }
+                    catch(Exception ex)
+                    {
+                        CardInfoService.WriteLog(DateTime.Now.ToString() + " : Read Card Success -- DataOnCard -- SplitData Error : " + carddata + " CardType : " + cardType.ToString() + " Exception : " + ex.ToString());
+                    }
                 }
             }
-            CardInfoService.WriteLog("Read Card:" + result.ToString() + ", responsedata:" + responsedata);
             return cardInfoResponse;
         }
 
@@ -63,33 +179,41 @@ namespace RadioLock
         //public int WriteCard(int cardtype, int cardnum, string datetime, string carddata, int datalen, bool Buzzer);
 
 
-        public int WriteCard(DateTime validDate, int buildingId, int floorId, int roomId, int subId)
+        public bool WriteCard(string roomName, DateTime endDate)
         {
-            CardInfoResponse1 card_info = ReadCard();
             //string data = "0F12500100";//0F125001: building = 15(0F)、floor = 18(12)、room = 80(50)、subroom = 1(01)，baseband value = 0，change to HEX string
             int result = 0;
-            int cardnum = 0;
-            cardnum = int.Parse(card_info.cardNumber);
-            byte buildcode, floorcode, roomcode, subcode;
-            string datetime = validDate.ToString("yyyyMMddHHmmss");
-            buildcode = Convert.ToByte(buildingId);
-            floorcode = Convert.ToByte(floorId);
-            roomcode = Convert.ToByte(roomId);
-            subcode = Convert.ToByte(subId);//range from 0-255  0-255  0-255  0-15
-            string data = buildcode.ToString("X2") + floorcode.ToString("X2") + roomcode.ToString("X2") + subcode.ToString("X2");
-            result = devCommand.WriteCard(CardType.card_Room_number, cardnum, datetime, data, data.Length, true);
-            //CardInfoService.CheckErr(result);
-            CardInfoService.WriteLog("WriteCard Response:" + result.ToString());
-            return result;
+            int cardnum = int.Parse(GetCardNumberBeforeWrite());
+            string validDate = endDate.ToString("yyyyMMddHHmmss");
+            RoomInfo roomInfo = GetAllCodebyRoomName(roomName);
+            string data = int.Parse(roomInfo.b_code).ToString("X2") 
+                + int.Parse(roomInfo.f_code).ToString("X2")
+                + int.Parse(roomInfo.r_code).ToString("X2")
+                + int.Parse(roomInfo.r_subcode).ToString("X2")
+                + int.Parse(roomInfo.r_subcodedai).ToString("X2");                        
+            result = devCommand.WriteCard(CardType.card_Guest, cardnum, validDate, data, data.Length, true);
+            if (result == 0)
+            {
+                CardInfoService.WriteLog(DateTime.Now.ToString() + " : WriteCard Success Code : " + result.ToString());
+                return true;
+            }
+            else
+            {
+                CardInfoService.WriteLog(DateTime.Now.ToString() + " : WriteCard Error Code : " + result.ToString());
+                return false;
+            }
         }
 
-        public int DeleteCard()
+        public bool DeleteCard()
         {
             int result = 0;
             result = devCommand.ClearCard(2, true); // clear card data
-            //CardInfoService.CheckErr(result);
-            CardInfoService.WriteLog("delete card status:" + result.ToString());
-            return result;
+            CardInfoService.WriteLog(DateTime.Now.ToString() + " Delete card status:" + result.ToString());
+            if(result<0)
+            {
+                return false;
+            }           
+            return true;
         }
     }
 

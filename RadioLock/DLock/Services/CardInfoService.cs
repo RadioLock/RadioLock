@@ -14,9 +14,8 @@ namespace RadioLock
 {
     public class CardInfoService : ServiceBase<CardInfoRequest1>
     {
-        private Hashtable roomList;
 
-        public string getReservationRoomId(string roomName, string cinTime)
+        public static string getReservationRoomId(string roomName, string cinTime)
         {
             string reservaionRoomId = "0";
             string[] ReservationRoomLines = File.ReadAllLines("ReservationRoomId.txt");
@@ -41,7 +40,7 @@ namespace RadioLock
             return reservaionRoomId;
         }
 
-        public void logReservationRoomId(string roomName, string cinTime, string reservationRoomId)
+        public static void logReservationRoomId(string roomName, string cinTime, string reservationRoomId)
         {
             // Tao file ghi nhan thong tin ReservationRoomId
             string logFilePath = "ReservationRoomId.txt";
@@ -89,139 +88,34 @@ namespace RadioLock
             File.WriteAllText(logFilePath, ReservationRoomValue);
         }
 
-        public string getLockNo(string roomName)
-        {
-            string password = ConfigurationSettings.AppSettings["dbPassword"];
-            string fileDb = ConfigurationSettings.AppSettings["fileDb"];
-            string datasource = ConfigurationSettings.AppSettings["dataSource"];
-            string dbname = ConfigurationSettings.AppSettings["dbName"];
-            RadioLockConnector.ConnectionString = String.Format("Data Source=" + datasource + ";Initial Catalog=" + dbname + ";Integrated Security=False;User Id=sa;Password=" + password + ";MultipleActiveResultSets=True", Settings.Default.LockFolder);
-            WriteLog("ConnectionString:" + RadioLockConnector.ConnectionString);
-            string _LockNo = "";
-
-            string queryString = "SELECT LockNo FROM RoomInfo where RoomName='" + roomName + "'"; //tớ không thấy bảng nào có lockno
-            WriteLog("queryString:" + queryString);
-            RadioLockConnector.ConnectionString = String.Format("Provider=Microsoft.Jet.OLEDB.4.0;Data Source={0}" + fileDb + ";Jet OLEDB:Database Password=" + password + ";", Settings.Default.LockFolder);
-
-            using (OleDbConnection connection = new OleDbConnection(RadioLockConnector.ConnectionString))
-            using (OleDbCommand command = new OleDbCommand(queryString, connection))
-            {
-                try
-                {
-                    connection.Open();
-                    OleDbDataReader reader = command.ExecuteReader();
-
-                    while (reader.Read())
-                    {
-                        _LockNo = reader[0].ToString();
-                    }
-                    reader.Close();
-                    //frmMain.reloadRoomList = false;
-                    connection.Close();
-                }
-                catch (Exception ex)
-                {
-                    _LockNo = "";
-                }
-            }
-
-            if (_LockNo.Length == 0)
-            {
-                if (roomName.Length == 3) roomName = "0" + roomName;
-                if (roomName.Length == 2) roomName = "00" + roomName;
-                queryString = "SELECT LockNo FROM RoomInfo where RoomName='" + roomName + "'";
-                WriteLog("queryString:" + queryString);
-                RadioLockConnector.ConnectionString = String.Format("Provider=Microsoft.Jet.OLEDB.4.0;Data Source={0}" + fileDb + ";Jet OLEDB:Database Password=" + password + ";", Settings.Default.LockFolder);
-
-                using (OleDbConnection connection = new OleDbConnection(RadioLockConnector.ConnectionString))
-                using (OleDbCommand command = new OleDbCommand(queryString, connection))
-                {
-                    try
-                    {
-                        connection.Open();
-                        OleDbDataReader reader = command.ExecuteReader();
-
-                        while (reader.Read())
-                        {
-                            _LockNo = reader[0].ToString();
-                        }
-                        reader.Close();
-                        //frmMain.reloadRoomList = false;
-                        connection.Close();
-                    }
-                    catch (Exception ex)
-                    {
-                        _LockNo = "";
-                    }
-                }
-            }
-
-            return _LockNo;
-        }
-
         protected override object Run(CardInfoRequest1 request)
         {
-            //string password = ConfigurationSettings.AppSettings["dbPassword"];
-            //string fileDb = ConfigurationSettings.AppSettings["fileDb"];
-            //string datasource = ConfigurationSettings.AppSettings["dataSource"];
-            //string dbname = ConfigurationSettings.AppSettings["dbName"];
-            //RadioLockConnector.ConnectionString = String.Format("Data Source=" + datasource + ";Initial Catalog="  + dbname + ";Integrated Security=False;User Id=sa;Password=" + password + ";MultipleActiveResultSets=True", Settings.Default.LockFolder);
-            WriteLog("ConnectionString:" + RadioLockConnector.ConnectionString);
-            var response = new CardInfoResponse1 { result = 0 }; //0: OK
-            var readCardResponse = new CardInfoResponse2 {isSucess = false};
-            //if (!frmMain.isValid) return response;
+            var response = new CardInfoResponse1(); //0: OK
             RadioLockConnector obj = new RadioLockConnector();
-
             switch (this.Request.PathInfo)
             {
                 case "/readcard": //read card info
-                    var result = obj.ReadCard();
-                    readCardResponse.message = result.response; // chỗ này chứa card data chưa biết nó trả ra như nào chờ có log rồi xử lý tiếp
-                    if(result.result==0)
-                    {
-                        readCardResponse.isSucess = true;            
-                        //var reservationRoomId = getReservationRoomId();
-                    }
-                    WriteLog("start Read card: Result-" + result);
-                    return new JavaScriptSerializer().Serialize(readCardResponse);
+                    WriteLog(DateTime.Now.ToString() + " /readcard Start");
+                    response = obj.ReadCard();
+                    WriteLog(DateTime.Now.ToString() + " /readcard End");
+                    return new JavaScriptSerializer().Serialize(response);
 
                 case "/writecard":
-                    //get build id, room id, room sub code, floor id roomId from roomName
-                    int floorId = 0, buildId = 0, SubRoomId = 0, roomId = 0;
-                    using (SqlConnection connection = new SqlConnection(RadioLockConnector.ConnectionString))
+                    WriteLog(DateTime.Now.ToString() + " /writecard Start");
+                    var result = obj.WriteCard(request.roomName, request.endDate);
+                    if (result) //success
                     {
-                        var queryString = string.Format("select R_FloorID,Build_ID,R_SubCode,R_ID from v_HotelRooms where R_NAME={0}", request.roomName);
-                        SqlCommand command = new SqlCommand(queryString, connection);
-                        try
-                        {
-                            connection.Open();
-                            SqlDataReader reader = command.ExecuteReader();
-                            while (reader.Read())
-                            {
-                                floorId = int.Parse(reader[0].ToString());
-                                buildId = int.Parse(reader[1].ToString());
-                                SubRoomId = int.Parse(reader[2].ToString());
-                                roomId = int.Parse(reader[3].ToString());
-                            }
-                            reader.Close();
-                        }
-                        catch (Exception ex)
-                        {
-                            CardInfoService.WriteLog("Error:" + ex.Message);
-                        }
+                        logReservationRoomId(request.roomName, request.endDate.ToString("yyyyMMddHHmmss"),request.reservationRoomId.ToString());
                     }
-                    response.result = obj.WriteCard(request.startDate, buildId, floorId, roomId, SubRoomId);
-                    if (response.result==0) //success
-                    {
-                        logReservationRoomId(request.roomName,request.startDate.ToString("yyyyMMddHHmmss"),request.reservationRoomId.ToString());
-                    }
-
-                    break;
+                    WriteLog(DateTime.Now.ToString() + " /writecard End");
+                    return new JavaScriptSerializer().Serialize(new { isSuccess = result });
 
                 case "/deletecard":
-                    response.result = obj.DeleteCard();
-                    break;
-
+                    WriteLog(DateTime.Now.ToString() + " /deletecard Start");
+                    var d_result = obj.DeleteCard();
+                    WriteLog(DateTime.Now.ToString() + " /deletecard End");
+                    return new JavaScriptSerializer().Serialize(new { isSuccess = d_result });
+                   
                 default:
                     break;
             }
