@@ -5,7 +5,7 @@ namespace RadioLock
     public class CardInfoRequest1
     {
         public int reservationRoomId { get; set; }
-        public int roomId { get; set; }
+        public string roomName { get; set; }
         public DateTime startDate { get; set; }
         public DateTime endDate { get; set; }
     }

@@ -8,6 +8,7 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
+using System.Web.Script.Serialization;
 
 namespace RadioLock
 {
@@ -15,11 +16,11 @@ namespace RadioLock
     {
         private Hashtable roomList;
 
-        public string getReservationRoomId(string roomId, string cinTime)
+        public string getReservationRoomId(string roomName, string cinTime)
         {
             string reservaionRoomId = "0";
             string[] ReservationRoomLines = File.ReadAllLines("ReservationRoomId.txt");
-            string sKey = roomId.Trim() + "_" + cinTime.Trim();
+            string sKey = roomName.Trim() + "_" + cinTime.Trim();
             File.AppendAllText("logs.txt", "\r\n sKey:=" + sKey, Encoding.ASCII);
 
             foreach (string line in ReservationRoomLines)
@@ -40,7 +41,7 @@ namespace RadioLock
             return reservaionRoomId;
         }
 
-        public void logReservationRoomId(string roomId, string cinTime, string reservationRoomId)
+        public void logReservationRoomId(string roomName, string cinTime, string reservationRoomId)
         {
             // Tao file ghi nhan thong tin ReservationRoomId
             string logFilePath = "ReservationRoomId.txt";
@@ -49,7 +50,7 @@ namespace RadioLock
             FileInfo logFileInfo;
             logFileInfo = new FileInfo(logFilePath);
             string ReservationRoomValue = "";
-            string sKey = roomId.Trim() + "_" + cinTime.Trim();
+            string sKey = roomName.Trim() + "_" + cinTime.Trim();
             bool flag = true;
 
             if (!logFileInfo.Exists)
@@ -178,18 +179,18 @@ namespace RadioLock
                     readCardResponse.message = result.response; // chỗ này chứa card data chưa biết nó trả ra như nào chờ có log rồi xử lý tiếp
                     if(result.result==0)
                     {
-                        readCardResponse.isSucess = true;                       
+                        readCardResponse.isSucess = true;            
+                        //var reservationRoomId = getReservationRoomId();
                     }
-                    //var reservationRoomId = getReservationRoomId(result., );
                     WriteLog("start Read card: Result-" + result);
-                    return readCardResponse;
+                    return new JavaScriptSerializer().Serialize(readCardResponse);
 
                 case "/writecard":
-                    //get build id, room id, room sub code, floor id from roomId
-                    int floorId = 0, buildId = 0, SubRoomId = 0;
+                    //get build id, room id, room sub code, floor id roomId from roomName
+                    int floorId = 0, buildId = 0, SubRoomId = 0, roomId = 0;
                     using (SqlConnection connection = new SqlConnection(RadioLockConnector.ConnectionString))
                     {
-                        var queryString = string.Format("select R_FloorID,Build_ID,R_SubCode from v_HotelRooms where R_ID={0}", request.roomId);
+                        var queryString = string.Format("select R_FloorID,Build_ID,R_SubCode,R_ID from v_HotelRooms where R_NAME={0}", request.roomName);
                         SqlCommand command = new SqlCommand(queryString, connection);
                         try
                         {
@@ -200,6 +201,7 @@ namespace RadioLock
                                 floorId = int.Parse(reader[0].ToString());
                                 buildId = int.Parse(reader[1].ToString());
                                 SubRoomId = int.Parse(reader[2].ToString());
+                                roomId = int.Parse(reader[3].ToString());
                             }
                             reader.Close();
                         }
@@ -208,10 +210,10 @@ namespace RadioLock
                             CardInfoService.WriteLog("Error:" + ex.Message);
                         }
                     }
-                    response.result = obj.WriteCard(request.startDate, buildId, floorId, request.roomId, SubRoomId);
+                    response.result = obj.WriteCard(request.startDate, buildId, floorId, roomId, SubRoomId);
                     if (response.result==0) //success
                     {
-                        logReservationRoomId(request.roomId.ToString(),request.startDate.ToString("yyyyMMddHHmmss"),request.reservationRoomId.ToString());
+                        logReservationRoomId(request.roomName,request.startDate.ToString("yyyyMMddHHmmss"),request.reservationRoomId.ToString());
                     }
 
                     break;
@@ -223,7 +225,7 @@ namespace RadioLock
                 default:
                     break;
             }
-            return response;
+            return new JavaScriptSerializer().Serialize(response);
         }
 
         public static void WriteLog(string strLog)
