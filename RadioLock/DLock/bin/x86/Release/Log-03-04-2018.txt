@@ -1,0 +1,12 @@
+3/4/2018 8:32:29 PM : Form Load
+
+3/4/2018 8:32:30 PM : ConnectionString : Data Source=(localdb)\v11.0;AttachDbFileName=C:\BiolockData\RadioLock20180111140229.mdf;Integrated Security=True
+
+3/4/2018 8:32:30 PM : Port opened
+
+3/4/2018 8:32:35 PM /deletecard Start
+
+3/4/2018 8:32:35 PM Delete card status:-2000
+
+3/4/2018 8:32:35 PM /deletecard End
+
