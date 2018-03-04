@@ -184,7 +184,7 @@ namespace RadioLock
             //string data = "0F12500100";//0F125001: building = 15(0F)、floor = 18(12)、room = 80(50)、subroom = 1(01)，baseband value = 0，change to HEX string
             int result = 0;
             int cardnum = int.Parse(GetCardNumberBeforeWrite());
-            string validDate = endDate.ToString("yyyyMMddHHmmss");
+            string validDate = endDate.ToString("yyyyMMddHHmm");
             RoomInfo roomInfo = GetAllCodebyRoomName(roomName);
             string data = int.Parse(roomInfo.b_code).ToString("X2") 
                 + int.Parse(roomInfo.f_code).ToString("X2")

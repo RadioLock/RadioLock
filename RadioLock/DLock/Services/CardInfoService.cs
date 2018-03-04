@@ -105,7 +105,7 @@ namespace RadioLock
                     var result = obj.WriteCard(request.roomName, request.endDate);
                     if (result) //success
                     {
-                        logReservationRoomId(request.roomName, request.endDate.ToString("yyyyMMddHHmmss"),request.reservationRoomId.ToString());
+                        logReservationRoomId(request.roomName, request.endDate.ToString("yyyyMMddHHmm"),request.reservationRoomId.ToString());
                     }
                     WriteLog(DateTime.Now.ToString() + " /writecard End");
                     return new JavaScriptSerializer().Serialize(new { isSuccess = result });

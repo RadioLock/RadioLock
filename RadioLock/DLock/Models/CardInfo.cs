@@ -6,7 +6,7 @@ namespace RadioLock
     {
         public int reservationRoomId { get; set; }
         public string roomName { get; set; }
-        public DateTime startDate { get; set; }
+        //public DateTime startDate { get; set; }
         public DateTime endDate { get; set; }
     }
 
