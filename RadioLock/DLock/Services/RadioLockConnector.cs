@@ -46,6 +46,10 @@ namespace RadioLock
                 {
                     CardInfoService.WriteLog(DateTime.Now.ToString() + " GetAllCodebyRoomName Error:" + ex.Message);
                 }
+                finally
+                {
+                    connection.Close();
+                }
             }
             return info;
         }
@@ -79,6 +83,10 @@ namespace RadioLock
                 catch (Exception ex)
                 {
                     CardInfoService.WriteLog(DateTime.Now.ToString() + " GetRoomName Error:" + ex.Message);
+                }
+                finally
+                {
+                    connection.Close();
                 }
             }
             return roomName;

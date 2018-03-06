@@ -61,6 +61,10 @@ namespace RadioLock
                     lblStatus.ForeColor = Color.Red;
                     return;
                 }
+                finally
+                {
+                    connection.Close();
+                }
             }
         }
 
