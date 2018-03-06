@@ -1,0 +1,39 @@
+1. Write Card
+URL :   http://localhost:2000/writecard
+TYPE : POST
+Input : JSON (application/json)
+{
+	"reservationRoomId":"1",
+	"roomName":"403",
+	"endDate":"2018-03-03 12:30"
+}
+
+output : Json
+{
+    "isSuccess": false // ket qua la true or false
+}
+
+2. Read Card
+URL :  http://localhost:2000/readcard 
+TYPE : GET
+Input : nothing
+output : Json 
+{
+"isSuccess":false,
+"message":"-2000",
+"cardNumber":null,
+"reservationRoomId":null,
+"roomName":null,
+"validTime":null       //2018-03-02 12:30
+}
+* Neu thanh cong thi isSuccess = true, cac thong so khac se co gia tri tuong ung lay duoc tu the.
+
+3. Delete Card
+URL :   http://localhost:2000/deletecard
+TYPE : GET
+Input : nothing
+output : Json
+{
+    "isSuccess": false // ket qua la true or false
+}
+
