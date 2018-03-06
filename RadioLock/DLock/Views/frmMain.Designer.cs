@@ -89,6 +89,7 @@
             this.MaximumSize = new System.Drawing.Size(573, 535);
             this.Name = "frmMain";
             this.Text = "ezCloud Hotel - GLock, DLock Connector";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.frmMain_FormClosing);
             this.Load += new System.EventHandler(this.frmMain_Load);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.ResumeLayout(false);

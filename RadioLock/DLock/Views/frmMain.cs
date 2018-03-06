@@ -2,6 +2,7 @@
 using ServiceStack.WebHost.Endpoints;
 using System;
 using System.Configuration;
+using System.Data;
 using System.Data.OleDb;
 using System.Data.SqlClient;
 using System.Drawing;
@@ -83,6 +84,15 @@ namespace RadioLock
             else
             {
                 CardInfoService.WriteLog(DateTime.Now.ToString() + " : Port opened");
+            }
+        }
+
+        private void frmMain_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            using (SqlConnection connectionx = new SqlConnection(RadioLockConnector.ConnectionString))
+            {
+                if(connectionx.State == ConnectionState.Open)
+                    connectionx.Close();
             }
         }
     }
